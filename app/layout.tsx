@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import ClientProviders from "@/components/ClientProviders";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,11 +24,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
+    <html lang="en" suppressHydrationWarning>
+      {/* <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+      </body> */}
+      <body className="bg-gray-100 text-gray-900 dark:bg-black/5 dark:text-white">
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );
