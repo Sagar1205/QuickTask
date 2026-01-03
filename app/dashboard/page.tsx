@@ -109,7 +109,7 @@ export default function Dashboard() {
       toast.error(error.message)
     }else{
       toast.success('List removed successfully')
-      setSelectedList(null)
+      setDeleteTaskId(null)
     }
   }
 

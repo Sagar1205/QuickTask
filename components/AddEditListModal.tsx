@@ -25,11 +25,15 @@ export default function ListModal({
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Prefill on edit
+  // Prefill on edit  
   useEffect(() => {
-    if (list) setTitle(list.title)
-    else setTitle('')
-  }, [list])
+    if (!open) return
+    if (list) {
+      setTitle(list.title)
+    } else {
+      setTitle('')
+    }
+  }, [list,open])
 
   if (!open) return null
 

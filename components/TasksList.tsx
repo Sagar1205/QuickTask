@@ -133,12 +133,12 @@ export default function TaskList({ listId }: { listId: string }) {
           strategy={verticalListSortingStrategy}
         >
           <div className="
-                  flex flex-col w-full items-center gap-2
-                  p-2 rounded
-                  bg-white border
-                  dark:bg-gray-900 dark:border-gray-700
-                  transition-colors
-                ">
+            flex flex-col w-full items-center gap-2
+            p-2 rounded
+            bg-white border
+            dark:bg-gray-900 dark:border-gray-700
+            transition-colors min-h-18 justify-center
+          ">
             {tasks.map(task => (
               <div
                 key={task.id}
@@ -221,6 +221,9 @@ export default function TaskList({ listId }: { listId: string }) {
                 </div>
               </div>
             ))}
+            {tasks.length === 0 && <div className='text-sm text-gray-500'>
+              Nothing planned. Enjoy the quiet…
+            </div>}
           </div>
         </SortableContext>
       </DndContext>
