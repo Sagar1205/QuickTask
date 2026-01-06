@@ -24,7 +24,8 @@ export async function addListMember(
   listId: string | null,
   userId: string,
   role: 'viewer' | 'editor',
-  userEmail: string
+  userEmail: string,
+  actorUserId: string | null
 ) {
   const { error } = await supabase
     .from('list_members')
@@ -41,6 +42,7 @@ export async function addListMember(
         listId,
         actorEmail: userEmail,
         targetUserId: userId,
+        actorUserId
       }),
     })
   }

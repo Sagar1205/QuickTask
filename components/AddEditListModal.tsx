@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
+import { useUser } from './UserContext'
 
 type List = {
   id?: string
@@ -22,6 +23,7 @@ export default function ListModal({
 //   onSuccess,
   list,
 }: Props) {
+    const { user } = useUser()
   const [title, setTitle] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -58,7 +60,7 @@ export default function ListModal({
         .single()
     }
     setLoading(false)
-		
+    onClose()
     if (result.error) {
       toast.error(result.error.message)
     } else {
@@ -66,8 +68,19 @@ export default function ListModal({
 				toast.success('List updated successfully')
 			} else {
 				toast.success('List added successfully')
+        const task = result.data;
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'list_created',
+            listId: task.id,
+            actorUserId: user?.id,
+            actorEmail: user?.email,
+            taskTitle: task?.title
+          }),
+        })
 			}
-      onClose()
     }
   }
 

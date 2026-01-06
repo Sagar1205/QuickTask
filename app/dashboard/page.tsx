@@ -93,6 +93,11 @@ export default function Dashboard() {
         { event: '*', schema: 'public', table: 'task_lists' },
         fetchLists
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'list_members' },
+        fetchLists
+      )
       .subscribe()
 
     return () => {
@@ -119,8 +124,8 @@ export default function Dashboard() {
   }
 
   // ➕ passed to modal
-  const handleShare = async (user: any, role: 'viewer' | 'editor') => {
-    const { error: shareError } = await addListMember(shareListId, user.id, role, user.email)
+  const handleShare = async (addUser: any, role: 'viewer' | 'editor') => {
+    const { error: shareError } = await addListMember(shareListId, addUser.id, role, user?.email || '', user?.id || null)
     if (shareError) {
       toast.error('Could not add member: ' + shareError.message);
       return;
@@ -182,6 +187,19 @@ export default function Dashboard() {
     )
   }
 
+  const getMyRole = (list: any) => {
+    if (list.owner_id === user?.id) return 'owner'
+    const member = list.list_members?.find(
+      (m: any) => m.user_id === user?.id
+    )
+    return member?.role ?? null
+  }
+
+  const canShare = (list: any) => {
+    const role = getMyRole(list)
+    return role === 'owner' || role === 'editor'
+  }
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Your Lists</h1>
@@ -234,30 +252,33 @@ export default function Dashboard() {
             </div>
 
             {/* Share icon – right side */}
-            <button
-              onClick={() => {
-                setIsShareModalOpen(true)
-                setShareListId(list.id)
-              }}
-              className="
-                absolute top-1/2 -right-3
-                -translate-y-1/2
-                bg-white border rounded-full
-                p-2 shadow
-                hover:bg-gray-100 cursor-pointer dark:bg-black
-              "
-              title="Share list"
-            >
-              <FontAwesomeIcon icon={faShareNodes} />
-            </button>
+            {canShare(list) && (
+              <button
+                onClick={() => {
+                  setIsShareModalOpen(true)
+                  setShareListId(list.id)
+                }}
+                // disabled={}
+                className="
+                  absolute top-1/2 -right-3
+                  -translate-y-1/2
+                  bg-white border rounded-full
+                  p-2 shadow
+                  hover:bg-gray-100 cursor-pointer dark:bg-black
+                "
+                title="Share list"
+              >
+                <FontAwesomeIcon icon={faShareNodes} />
+              </button>
+            )}
           </div>
         ))}
       </div>
 
       <DeleteConfirmModal
         open={!!deleteTaskId}
-        title="Delete task"
-        description={`Are you sure you want to delete this task?`}
+        title="Delete list"
+        description={`Are you sure you want to delete this list?`}
         onCancel={() => setDeleteTaskId(null)}
         onConfirm={handleDelete}
       />

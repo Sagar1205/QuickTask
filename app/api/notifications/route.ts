@@ -71,12 +71,13 @@ export async function POST(req: Request) {
     members?.forEach(m => recipients.add(m.user_id))
 
     // Remove actor
-    recipients.delete(actorUserId)
+    // recipients.delete(actorUserId)
 
     // Member added → notify only added user
     if (type === 'member_added' && targetUserId) {
       recipients.clear()
       recipients.add(targetUserId)
+      recipients.add(actorUserId)
     }
 		
 		const membersNormalized = members?.map(m => ({
@@ -101,10 +102,11 @@ export async function POST(req: Request) {
 					type,
 					listId,
 					taskTitle,
+          email
 				}),
 			})
     }
-		
+    
 		const delay = (ms: number) => new Promise(res => setTimeout(res, ms))
 		for (const email of emailJobs) {
 			try {
@@ -130,18 +132,21 @@ function buildEmailHtml({
   type,
   listId,
   taskTitle,
+  email
 }: {
   actorEmail: string
   type: string
   listId: string
-  taskTitle?: string
+  taskTitle?: string,
+  email: string
 }) {
   const actorName = actorEmail.split('@')[0]
+  const receipant = email.split('@')[0]
 
   let message = ''
   switch (type) {
     case 'member_added':
-      message = 'added you to a list'
+      message = actorName === receipant ? `added someone to a list` : `added ${receipant} to a list`
       break
     case 'task_created':
       message = `created a task "${taskTitle}"`
@@ -151,6 +156,9 @@ function buildEmailHtml({
       break
     case 'task_updated':
       message = `updated a task "${taskTitle}"`
+      break
+    case 'list_created':
+      message = `created a list "${taskTitle}"`
       break
     default:
       message = type.replace('_', ' ')
