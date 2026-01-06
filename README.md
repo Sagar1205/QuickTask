@@ -45,6 +45,9 @@ Refer to .env.example. For local development, rename it to .env.local and config
 ```
 NEXT_PUBLIC_SUPABASE_URL=supabase_data_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=supabase_publishable_key
+NEXT_PUBLIC_APP_URL=project_url
+SUPABASE_SERVICE_ROLE_KEY=supabase_secret_key
+RESEND_API_KEY=resend_api_key
 ```
 #### Start the app
 ```
