@@ -8,11 +8,16 @@ import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-ki
 import AddEditTaskModal from "./AddEditTaskModal"
 import toast from 'react-hot-toast'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPenToSquare, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faPenToSquare, faTrash, faHistory } from '@fortawesome/free-solid-svg-icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import LogsModal from './ActivityLogs'
+import { useUser } from './UserContext'
 
 export default function TaskList({ listId }: { listId: string }) {
+  const { user } = useUser()
+
   const [tasks, setTasks] = useState<any[]>([])
+  const [logs, setLogs] = useState<any[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<{
     id: string
@@ -22,7 +27,9 @@ export default function TaskList({ listId }: { listId: string }) {
     due_date: string
   } | null>(null)
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
-  
+  const [isLogsOpen, setIsLogsOpen] = useState(false)
+  const [loadingData,setLoadingData] = useState<{load: boolean, ops: string}>({load: false, ops: ''})
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -64,18 +71,50 @@ export default function TaskList({ listId }: { listId: string }) {
     }
   }, [listId])
 
+  useEffect(()=>{
+    const fetchLogs = async() => {
+      const { data: logs } = await supabase
+        .from('audit_logs')
+        .select(`*,
+          actor:profiles(id, email)`)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      const logsForCurrentList = logs?.filter(
+        log => log.entity_id === listId || log.metadata?.list_id === listId
+      )
+      setLogs(logsForCurrentList || [])
+    }
+    fetchLogs()
+  },[listId,tasks])
+
   const handleDelete = async () => {
-    const { error } = await supabase
+    setLoadingData({load: true, ops: 'delete'})
+    const res = await supabase
       .from('tasks')
       .delete()
       .eq('id', deleteTaskId)
+      .select()
 
-    if(error){
-      toast.error(error.message)
+    if(res.error){
+      toast.error(res.error.message)
     }else{
+      const deletedTask = res.data[0]
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'task_deleted',
+          listId,
+          actorUserId: user?.id,
+          actorEmail: user?.email,
+          taskTitle: deletedTask.title
+        }),
+      })
       toast.success('Task removed successfully')
       setDeleteTaskId(null)
     }
+    setLoadingData({load: false, ops: ''})
   }
 
   const handleDragEnd = async (event: any) => {
@@ -112,20 +151,29 @@ export default function TaskList({ listId }: { listId: string }) {
   return (
     <div className="p-6 max-w-xl mx-auto">
       {/* Add task */}
-      <button
-        onClick={() => setIsModalOpen(true)}
-        className="
-          mb-4 px-4 py-2 rounded
-          bg-black text-white
-          hover:bg-gray-800
-          dark:bg-white dark:text-black
-          dark:hover:bg-gray-200
-          transition-colors
-          cursor-pointer
-        "
-      >
-        + Add Task
-      </button>
+      <div className='flex justify-between'>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="
+            mb-4 px-4 py-2 rounded
+            bg-black text-white
+            hover:bg-gray-800
+            dark:bg-white dark:text-black
+            dark:hover:bg-gray-200
+            transition-colors
+            cursor-pointer
+          "
+        >
+          + Add Task
+        </button>
+
+        <div
+          onClick={() => setIsLogsOpen(true)}
+          className="mb-4 px-2 flex items-center text-sm rounded cursor-pointer bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200"
+        >
+          <FontAwesomeIcon icon={faHistory} className='w-10 h-10'/>
+        </div>
+      </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext
@@ -245,6 +293,14 @@ export default function TaskList({ listId }: { listId: string }) {
         description="Are you sure you want to delete this task?"
         onCancel={() => setDeleteTaskId(null)}
         onConfirm={handleDelete}
+        loading={loadingData.load === true && loadingData.ops === 'delete'}
+      />
+
+      <LogsModal
+        isOpen={isLogsOpen}
+        onClose={() => setIsLogsOpen(false)}
+        logs={logs ?? []}
+        currentUserId={user?.id}
       />
     </div>
   )

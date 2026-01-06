@@ -12,6 +12,7 @@ import CollabModal from '@/components/CollabModal'
 import {
   searchUsersByEmail,
   addListMember,
+  removeListMember,
 } from '@/lib/lists'
 import { useUser } from '@/components/UserContext'
 
@@ -25,8 +26,8 @@ type ListMemberRow = {
   user_id: string
   role: 'viewer' | 'editor'
   profiles:
-    | { email: string }          // object form
-    | { email: string }[]        // array form
+    | { email: string }
+    | { email: string }[]
     | null
 }
 
@@ -119,7 +120,7 @@ export default function Dashboard() {
 
   // ➕ passed to modal
   const handleShare = async (user: any, role: 'viewer' | 'editor') => {
-    const { error: shareError } = await addListMember(shareListId, user.id, role)
+    const { error: shareError } = await addListMember(shareListId, user.id, role, user.email)
     if (shareError) {
       toast.error('Could not add member: ' + shareError.message);
       return;
@@ -144,6 +145,38 @@ export default function Dashboard() {
       data.map(m => ({
         user_id: m.user_id,
         email: m.profiles?.[0]?.email ?? '',
+        role: m.role,
+      }))
+    )
+  }
+
+  const handleRevokePermission = async (user: any) => {
+    const { error: removeErr } = await removeListMember(shareListId, user.user_id, user.email)
+    if (removeErr) {
+      toast.error('Could not remove member: ' + removeErr.message);
+      return;
+    }
+
+    toast.success('Member removed successfully');
+    const { data, error } = await supabase
+      .from('list_members')
+      .select('user_id, role, profiles(email)')
+      .eq('list_id', shareListId)
+
+    if (error || !data) {
+      console.error(error)
+      return
+    }
+
+    const membersNormalized = data?.map(m => ({
+			...m,
+			profile: Array.isArray(m.profiles) ? m.profiles[0] : m.profiles,
+		}));
+
+    setMembers(
+      membersNormalized.map(m => ({
+        user_id: m.user_id,
+        email: m.profile?.email ?? '',
         role: m.role,
       }))
     )
@@ -245,6 +278,7 @@ export default function Dashboard() {
         existingMembers={members}
         searchUsers={handleSearchUsers}
         onShare={handleShare}
+        onRevoke={handleRevokePermission}
       />
     </div>
   )

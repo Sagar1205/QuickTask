@@ -1,12 +1,16 @@
 'use client'
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleNotch } from '@fortawesome/free-solid-svg-icons'
+
 type Props = {
   open: boolean
   title?: string
   description?: string | null
   confirmText?: string
   onCancel: () => void
-  onConfirm: () => void
+  onConfirm: () => void,
+  loading?: boolean
 }
 
 export default function DeleteConfirmModal({
@@ -16,6 +20,7 @@ export default function DeleteConfirmModal({
   confirmText = 'Delete',
   onCancel,
   onConfirm,
+  loading
 }: Props) {
   if (!open) return null
 
@@ -38,7 +43,13 @@ export default function DeleteConfirmModal({
             onClick={onConfirm}
             className="px-3 py-1 bg-red-700 text-white rounded cursor-pointer"
           >
-            {confirmText}
+            {loading ? (
+              <>
+                <FontAwesomeIcon icon={faCircleNotch} spin />
+              </>
+            ) : (
+              <>{confirmText}</>
+            )}
           </button>
         </div>
       </div>

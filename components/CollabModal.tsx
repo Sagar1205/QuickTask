@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCircleNotch, faRemove, faTrash } from '@fortawesome/free-solid-svg-icons'
 
 const PERMISSIONS = ['viewer', 'editor']
 
@@ -19,6 +21,7 @@ type ShareModalProps = {
   existingMembers: ListMember[]
   searchUsers: (query: string) => Promise<UserSearchResult[]>
   onShare: (user: UserSearchResult, role: 'viewer' | 'editor') => Promise<void>
+  onRevoke: (user: any) => Promise<void>
 }
 
 export default function ShareModal({
@@ -27,12 +30,15 @@ export default function ShareModal({
   onShare,
   existingMembers = [],
   searchUsers,
+  onRevoke
 }: ShareModalProps) {
   const [query, setQuery] = useState<string>('')
   const [results, setResults] = useState<UserSearchResult[]>([])
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
   const [permission, setPermission] = useState<'viewer' | 'editor'>('viewer')
   const [loading, setLoading] = useState<boolean>(false)
+  const [revokeLoading, setRevokeLoading] = useState<boolean>(false)
+  const [memberId, setMemberId] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen) {
@@ -59,6 +65,14 @@ export default function ShareModal({
     setQuery('')
     setResults([])
     setLoading(false)
+  }
+
+  const handleRevoke = async (member: any) => {
+    setRevokeLoading(true)
+    setMemberId(member.user_id)
+    await onRevoke(member)
+    setRevokeLoading(false)
+    setMemberId(null)
   }
 
   if (!isOpen) return null
@@ -142,25 +156,48 @@ export default function ShareModal({
             {existingMembers.map(member => (
               <div
                 key={member.user_id}
-                className="flex justify-between items-center text-sm"
+                className="flex justify-between items-center text-sm group"
               >
-                {/* <span>{member.email}</span> */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <div
-                    className="h-8 w-8 rounded-full
-                      bg-blue-800 text-white
-                      flex items-center justify-center
-                      text-sm font-semibold"
+                    className="h-8 w-8 rounded-full bg-blue-800 text-white
+                              flex items-center justify-center
+                              text-sm font-semibold"
                   >
                     {member.email?.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-gray-700 dark:text-gray-300">
                     {member.email}
                   </span>
                 </div>
-                <span className="text-gray-500 dark:text-gray-400 capitalize">
-                  {member.role}
-                </span>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-gray-500 dark:text-gray-400 capitalize">
+                    {member.role}
+                  </span>
+
+                  <button
+                    onClick={() => handleRevoke(member)}
+                    // disabled={!isOwner || member.user_id === user?.id}
+                    title="Remove member"
+                    className="
+                      opacity-40 group-hover:opacity-100
+                      text-red-600 hover:text-red-700
+                      disabled:opacity-30 disabled:cursor-not-allowed
+                      transition cursor-pointer
+                    "
+                  >
+                    {(revokeLoading && memberId === member.user_id) ? (
+                      <>
+                        <FontAwesomeIcon icon={faCircleNotch} spin />
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faTrash} />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

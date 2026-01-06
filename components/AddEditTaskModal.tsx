@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons'
+import { useUser } from './UserContext'
 
 type Task = {
   id?: string
@@ -22,6 +23,7 @@ type Props = {
 }
 
 export default function TaskModal({ open, onClose, listId, task }: Props) {
+  const { user } = useUser()
   const [title, setTitle] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [priority, setPriority] = useState<string>('1')
@@ -73,7 +75,22 @@ export default function TaskModal({ open, onClose, listId, task }: Props) {
         due_date: dueDate || null,
         list_id: listId,
         position: 0,
-      })
+      }).select()
+
+      if(!res.error){
+        const task = res.data[0];
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'task_created',
+            listId,
+            actorUserId: user?.id,
+            actorEmail: user?.email,
+            taskTitle: task?.title
+          }),
+        })
+      }
     }
 
     setLoading(false)

@@ -72,7 +72,7 @@ export default function ListModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50  dark:bg-black/60">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 dark:bg-black/60">
       <div className="bg-white w-full sm:max-w-sm mx-4 rounded-lg shadow-lg p-4 space-y-4 dark:bg-gray-900 dark:text-gray-100">
         <h2 className="text-lg font-semibold">
           {list ? 'Edit List' : 'New List'}
