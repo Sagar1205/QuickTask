@@ -233,7 +233,7 @@ export default function Dashboard() {
               </Link>
 
               {/* Edit / Delete */}
-              <div className="flex items-center gap-1">
+              {canShare(list) && <div className="flex items-center gap-1">
                 <FontAwesomeIcon
                   onClick={() => {
                     setSelectedList(list)
@@ -248,7 +248,7 @@ export default function Dashboard() {
                   icon={faTrash}
                   className="cursor-pointer text-red-700"
                 />
-              </div>
+              </div>}
             </div>
 
             {/* Share icon – right side */}

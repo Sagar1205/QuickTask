@@ -146,7 +146,15 @@ export default function ShareModal({
             disabled={!selectedUser || loading}
             className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded disabled:opacity-50 cursor-pointer"
           >
-            Add
+            {loading ? (
+              <>
+                <FontAwesomeIcon icon={faCircleNotch} spin />
+              </>
+            ) : (
+              <>
+                Add
+              </>
+            )}
           </button>
         </div>
         {/* Existing members */}
