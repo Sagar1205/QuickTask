@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCircleNotch, faRemove, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { stringToColor } from '@/lib/helper'
 
 const PERMISSIONS = ['viewer', 'editor']
 
@@ -111,9 +112,10 @@ export default function ShareModal({
                   <div className="flex items-center gap-1">
                     <div
                       className="h-8 w-8 rounded-full
-                        bg-blue-800 text-white
+                        text-white
                         flex items-center justify-center
                         text-sm font-semibold"
+                      style={{ backgroundColor: stringToColor(user.email) || "#2563eb" }}
                     >
                       {user.email?.charAt(0).toUpperCase()}
                     </div>
@@ -168,9 +170,10 @@ export default function ShareModal({
               >
                 <div className="flex items-center gap-2">
                   <div
-                    className="h-8 w-8 rounded-full bg-blue-800 text-white
+                    className="h-8 w-8 rounded-full text-white
                               flex items-center justify-center
                               text-sm font-semibold"
+                    style={{ backgroundColor: stringToColor(member.email) || "#2563eb" }}
                   >
                     {member.email?.charAt(0).toUpperCase()}
                   </div>

@@ -12,6 +12,7 @@ import { faPenToSquare, faTrash, faHistory } from '@fortawesome/free-solid-svg-i
 import DeleteConfirmModal from './DeleteConfirmModal'
 import LogsModal from './ActivityLogs'
 import { useUser } from './UserContext'
+import ActiveUsers from './ActiveUsers'
 
 export default function TaskList({ listId }: { listId: string }) {
   const { user } = useUser()
@@ -167,11 +168,14 @@ export default function TaskList({ listId }: { listId: string }) {
           + Add Task
         </button>
 
-        <div
-          onClick={() => setIsLogsOpen(true)}
-          className="mb-4 px-2 flex items-center text-sm rounded cursor-pointer bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200"
-        >
-          <FontAwesomeIcon icon={faHistory} className='w-10 h-10'/>
+        <div className='flex gap-4'>
+          <ActiveUsers listId={listId}/>
+          <div
+            onClick={() => setIsLogsOpen(true)}
+            className="mb-4 px-2 flex items-center text-sm rounded cursor-pointer bg-gray-200 hover:bg-gray-300 dark:bg-gray-800 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-200"
+          >
+            <FontAwesomeIcon icon={faHistory} className='w-10 h-10'/>
+          </div>
         </div>
       </div>
 
