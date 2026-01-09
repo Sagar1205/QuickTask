@@ -13,7 +13,7 @@ export function DueDateBadge({ dueDate }: { dueDate?: string }) {
   return (
     <span
       className={`
-        text-[11px] leading-none h-full
+        text-[11px] leading-none h-full flex items-center
         ${
           isOverdue
             ? 'text-red-600 dark:text-red-400'

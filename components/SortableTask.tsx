@@ -20,12 +20,12 @@ export default function SortableTask({ task, className }: SortableTaskProps) {
   }
 
   const combinedClasses = `
-    flex justify-between p-2 w-full rounded border
+    flex flex-col justify-between p-2 w-full rounded border
     bg-gray-50 text-gray-900
     dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700
     hover:bg-white dark:hover:bg-gray-900
-    transition-colors
-    ${task.completed ? 'line-through opacity-60' : ''}
+    transition-colors mb-1 text-[15px] group
+    ${task.completed ? 'line-through opacity-60 hover:no-underline' : ''}
     ${className}
   `
 
@@ -35,19 +35,23 @@ export default function SortableTask({ task, className }: SortableTaskProps) {
       style={style}
       className={combinedClasses}
     >
-      <span
-        {...attributes}
-        {...listeners}
-        className="mr-2 cursor-grab touch-none"
-      >
-        ⠿
-      </span>
-
-      <span className="flex-1">{task.title}</span>
-      <div className="flex flex-col items-end shrink-0">
-        <PriorityIcon priority={task.priority} />
-        <DueDateBadge dueDate={task.due_date} />
+      <div className='flex items-center'>
+        <span
+          {...attributes}
+          {...listeners}
+          className="mr-1 cursor-grab touch-none"
+        >
+          ⠿
+        </span>
+        <div className='flex justify-between flex-1'>
+          <span className="flex-1 leading-[1.2] mt-[2.5px]">{task.title}</span>
+          <div className="flex flex-col justify-start items-end">
+            <PriorityIcon priority={task.priority} />
+            <DueDateBadge dueDate={task.due_date} />
+          </div>
+        </div>
       </div>
+      {!task.completed && <span className="mt-[2px] flex-1 text-xs text-gray-400 dark:text-gray-600 leading-none">{task.description}</span>}
     </div>
   )
 }

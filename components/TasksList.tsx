@@ -3,16 +3,46 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import SortableTask from './SortableTask'
-import { DndContext, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { DndContext, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors, DragOverlay, useDroppable } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import AddEditTaskModal from "./AddEditTaskModal"
 import toast from 'react-hot-toast'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faPenToSquare, faTrash, faHistory } from '@fortawesome/free-solid-svg-icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
-import LogsModal from './ActivityLogs'
 import { useUser } from './UserContext'
 import ActiveUsers from './ActiveUsers'
+import LogsModal from './ActivityLogs'
+
+const TODO_COLUMN_ID = 'todo-column'
+const DONE_COLUMN_ID = 'done-column'
+
+function TaskColumn({
+  id,
+  title,
+  children,
+}: {
+  id: string
+  title: string
+  children: React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+        p-2 rounded border min-h-28
+        transition-colors
+        dark:bg-gray-900 dark:border-gray-700
+        ${isOver ? 'bg-blue-50 dark:bg-gray-800' : ''}
+      `}
+    >
+      <h3 className="font-semibold mb-2">{title}</h3>
+      {children}
+    </div>
+  )
+}
 
 export default function TaskList({ listId }: { listId: string }) {
   const { user } = useUser()
@@ -30,6 +60,7 @@ export default function TaskList({ listId }: { listId: string }) {
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
   const [isLogsOpen, setIsLogsOpen] = useState(false)
   const [loadingData,setLoadingData] = useState<{load: boolean, ops: string}>({load: false, ops: ''})
+  const [activeTask, setActiveTask] = useState<any | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -39,7 +70,7 @@ export default function TaskList({ listId }: { listId: string }) {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200,
+        delay: 150,
         tolerance: 5,
       },
     })
@@ -118,29 +149,77 @@ export default function TaskList({ listId }: { listId: string }) {
     setLoadingData({load: false, ops: ''})
   }
 
-  const handleDragEnd = async (event: any) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
+  const handleDragEnd = async ({ active, over }: any) => {
+    setActiveTask(null)
+    if (!over) return
 
-    const oldIndex = tasks.findIndex(t => t.id === active.id)
-    const newIndex = tasks.findIndex(t => t.id === over.id)
-    const reordered = arrayMove(tasks, oldIndex, newIndex)
-    setTasks(reordered)
+    const dragged = tasks.find(t => t.id === active.id)
+    if (!dragged) return
 
-    await Promise.all(
-      reordered.map((t, i) =>
-        supabase.from('tasks').update({ position: i }).eq('id', t.id)
+    // target column
+    let targetCompleted = dragged.completed
+
+    if (over.id === TODO_COLUMN_ID) targetCompleted = false
+    if (over.id === DONE_COLUMN_ID) targetCompleted = true
+
+    const overTask = tasks.find(t => t.id === over.id)
+    if (overTask) targetCompleted = overTask.completed
+
+    const sameColumn = dragged.completed === targetCompleted
+
+    // same col
+    if (sameColumn && overTask) {
+      const columnTasks = tasks
+        .filter(t => t.completed === dragged.completed)
+        .sort((a, b) => a.position - b.position)
+
+      const oldIndex = columnTasks.findIndex(t => t.id === dragged.id)
+      const newIndex = columnTasks.findIndex(t => t.id === overTask.id)
+
+      if (oldIndex === newIndex) return
+
+      const reordered = arrayMove(columnTasks, oldIndex, newIndex)
+
+      const updatedTasks = [
+        ...tasks.filter(t => t.completed !== dragged.completed),
+        ...reordered.map((t, i) => ({ ...t, position: i })),
+      ]
+
+      setTasks(updatedTasks)
+
+      await Promise.all(
+        reordered.map((t, i) =>
+          supabase.from('tasks').update({ position: i }).eq('id', t.id)
+        )
       )
-    )
-  }
 
-  const updateTaskStatus = async (task: any) => {    
+      return
+    }
+
+    // cross col
+    const movedTask = { ...dragged, completed: targetCompleted }
+
+    const remainingTasks = tasks.filter(t => t.id !== dragged.id)
+
+    const targetColumnTasks = remainingTasks
+      .filter(t => t.completed === targetCompleted)
+      .sort((a, b) => a.position - b.position)
+
+    const newPosition = targetColumnTasks.length
+
+    const updatedTasks = [
+      ...remainingTasks,
+      { ...movedTask, position: newPosition },
+    ]
+    setTasks(updatedTasks)
+
     const { error } = await supabase
       .from('tasks')
       .update({
-        completed: !task.completed
+        completed: targetCompleted,
+        position: newPosition
       })
-      .eq('id', task.id)
+      .eq('id', dragged.id)
 
     if(error){
       toast.error(error.message)
@@ -150,8 +229,7 @@ export default function TaskList({ listId }: { listId: string }) {
   }
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      {/* Add task */}
+    <div className="py-4 max-w-4xl mx-auto">
       <div className='flex justify-between'>
         <button
           onClick={() => setIsModalOpen(true)}
@@ -178,109 +256,120 @@ export default function TaskList({ listId }: { listId: string }) {
           </div>
         </div>
       </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={event => setActiveTask(tasks.find(t => t.id === event.active.id) || null)}
+        onDragEnd={handleDragEnd}
+      >
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={tasks.map(t => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <div className="
-            flex flex-col w-full items-center gap-2
-            p-2 rounded
-            bg-white border
-            dark:bg-gray-900 dark:border-gray-700
-            transition-colors min-h-18 justify-center
-          ">
-            {tasks.map(task => (
-              <div
-                key={task.id}
-                // className="
-                //   flex w-full items-center gap-2
-                //   p-2 rounded
-                //   bg-white border
-                //   dark:bg-gray-900 dark:border-gray-700
-                //   transition-colors
-                // "
-                className="
-                  flex w-full items-center gap-2
-                  p-2 rounded
-                  transition-colors
-                "
-              >
-                {/* Custom radio-style checkbox */}
-                <div
-                  role="checkbox"
-                  aria-checked={!!task.completed}
-                  onClick={() => updateTaskStatus(task)}
-                  className="
-                    h-6 w-6 rounded-full border-2
-                    flex items-center justify-center
-                    cursor-pointer aspect-square
-                    border-gray-400
-                    dark:border-gray-500
-                    hover:border-gray-600
-                    dark:hover:border-gray-300
-                    transition-colors
-                  "
-                >
-                  {task.completed && (
-                    <div
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+
+          {/* TODO COLUMN */}
+          <TaskColumn id={TODO_COLUMN_ID} title="To Do">
+            <SortableContext
+              items={tasks.filter(t => !t.completed).map(t => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {tasks.filter(t => !t.completed).map(task => (
+                <div key={task.id} className='flex w-full items-center gap-[1px]'>
+                  <SortableTask task={task} />
+                  <div className="ml-auto flex items-center">
+                    <FontAwesomeIcon
+                      onClick={() => {
+                        setEditingTask(task)
+                        setIsModalOpen(true)
+                      }}
+                      icon={faPenToSquare}
                       className="
-                        h-3 w-3 rounded-full
-                        bg-gray-600
-                        dark:bg-gray-300
+                        cursor-pointer
+                        text-gray-500
+                        hover:text-gray-800
+                        dark:text-gray-400
+                        dark:hover:text-gray-200
+                        transition-colors
                       "
                     />
-                  )}
+
+                    <FontAwesomeIcon
+                      onClick={() => setDeleteTaskId(task.id)}
+                      icon={faTrash}
+                      className="
+                        cursor-pointer
+                        text-red-600
+                        hover:text-red-700
+                        dark:text-red-500
+                        dark:hover:text-red-400
+                        transition-colors
+                      "
+                    />
+                  </div>
                 </div>
+              ))}
+              {tasks.filter(t => !t.completed)?.length === 0 && <div className='text-sm text-gray-500 mt-6 flex justify-center '>
+                Nothing planned. Enjoy the quiet…
+              </div>}
+            </SortableContext>
+          </TaskColumn>
 
-                {/* Draggable task */}
-                <SortableTask
-                  task={task}
-                  className={task.completed ? 'opacity-60 line-through' : ''}
-                />
+          {/* DONE COLUMN */}
+          <TaskColumn id={DONE_COLUMN_ID} title="Completed">
+            <SortableContext
+              items={tasks.filter(t => t.completed).map(t => t.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {tasks.filter(t => t.completed).map(task => (
+                <div key={task.id} className='flex w-full items-center gap-1'>
+                  <SortableTask task={task} />
+                  <div className="ml-auto flex items-center">
+                    <FontAwesomeIcon
+                      onClick={() => {
+                        setEditingTask(task)
+                        setIsModalOpen(true)
+                      }}
+                      icon={faPenToSquare}
+                      className="
+                        cursor-pointer
+                        text-gray-500
+                        hover:text-gray-800
+                        dark:text-gray-400
+                        dark:hover:text-gray-200
+                        transition-colors text-lg
+                      "
+                    />
 
-                {/* Actions */}
-                <div className="ml-auto flex items-center gap-1">
-                  <FontAwesomeIcon
-                    onClick={() => {
-                      setEditingTask(task)
-                      setIsModalOpen(true)
-                    }}
-                    icon={faPenToSquare}
-                    className="
-                      cursor-pointer
-                      text-gray-500
-                      hover:text-gray-800
-                      dark:text-gray-400
-                      dark:hover:text-gray-200
-                      transition-colors
-                    "
-                  />
-
-                  <FontAwesomeIcon
-                    onClick={() => setDeleteTaskId(task.id)}
-                    icon={faTrash}
-                    className="
-                      cursor-pointer
-                      text-red-600
-                      hover:text-red-700
-                      dark:text-red-500
-                      dark:hover:text-red-400
-                      transition-colors
-                    "
-                  />
+                    <FontAwesomeIcon
+                      onClick={() => setDeleteTaskId(task.id)}
+                      icon={faTrash}
+                      className="
+                        cursor-pointer
+                        text-red-600
+                        hover:text-red-700
+                        dark:text-red-500
+                        dark:hover:text-red-400
+                        transition-colors text-lg
+                      "
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
-            {tasks.length === 0 && <div className='text-sm text-gray-500'>
-              Nothing planned. Enjoy the quiet…
-            </div>}
-          </div>
-        </SortableContext>
+              ))}
+              {tasks.filter(t => t.completed)?.length === 0 && <div className='text-sm text-gray-500 mt-6 flex justify-center '>
+                This side’s looking a little empty…
+              </div>}
+            </SortableContext>
+          </TaskColumn>
+
+        </div>
+
+        <DragOverlay>
+          {activeTask ? (
+            <div className="p-3 rounded border bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-lg">
+              {activeTask.title}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
-      {/* Modals */}
       <AddEditTaskModal
         open={isModalOpen}
         onClose={() => {

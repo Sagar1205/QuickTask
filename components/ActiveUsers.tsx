@@ -43,7 +43,7 @@ export default function ActiveUsers({ listId }: any) {
           {/* Tooltip */}
           <div
             className="
-              absolute top-full mt-1 left-1/2 -translate-x-1/2
+              absolute top-full -mt-4 left-1/2 -translate-x-1/2
               whitespace-nowrap
               rounded-md px-2 py-1 text-xs
               opacity-0 group-hover:opacity-100
