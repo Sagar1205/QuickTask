@@ -272,7 +272,7 @@ export default function TaskList({ listId }: { listId: string }) {
               strategy={verticalListSortingStrategy}
             >
               {tasks.filter(t => !t.completed).map(task => (
-                <div key={task.id} className='flex w-full items-center gap-[1px]'>
+                <div key={task.id} className='flex w-full items-center gap-[3px]'>
                   <SortableTask task={task} />
                   <div className="ml-auto flex items-center">
                     <FontAwesomeIcon
@@ -319,7 +319,7 @@ export default function TaskList({ listId }: { listId: string }) {
               strategy={verticalListSortingStrategy}
             >
               {tasks.filter(t => t.completed).map(task => (
-                <div key={task.id} className='flex w-full items-center gap-1'>
+                <div key={task.id} className='flex w-full items-center gap-[3px]'>
                   <SortableTask task={task} />
                   <div className="ml-auto flex items-center">
                     <FontAwesomeIcon
@@ -334,7 +334,7 @@ export default function TaskList({ listId }: { listId: string }) {
                         hover:text-gray-800
                         dark:text-gray-400
                         dark:hover:text-gray-200
-                        transition-colors text-lg
+                        transition-colors
                       "
                     />
 
@@ -347,7 +347,7 @@ export default function TaskList({ listId }: { listId: string }) {
                         hover:text-red-700
                         dark:text-red-500
                         dark:hover:text-red-400
-                        transition-colors text-lg
+                        transition-colors
                       "
                     />
                   </div>
